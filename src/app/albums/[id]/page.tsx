@@ -1,0 +1,71 @@
+import { Suspense } from "react";
+import Link from "next/link";
+import { notFound, redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import Uploader from "@/components/Uploader";
+
+export default function AlbumPage({ params }: PageProps<"/albums/[id]">) {
+  return (
+    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8">
+      <Link href="/" className="text-sm text-stone-500">← อัลบั้มทั้งหมด</Link>
+      <Suspense fallback={<p className="mt-6 text-stone-500">กำลังโหลด…</p>}>
+        <AlbumContent params={params} />
+      </Suspense>
+    </main>
+  );
+}
+
+async function AlbumContent({ params }: { params: PageProps<"/albums/[id]">["params"] }) {
+  const { id } = await params;
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const { data: album } = await supabase
+    .from("album_albums")
+    .select("id, title")
+    .eq("id", id)
+    .maybeSingle();
+  if (!album) notFound();
+
+  const { data: photos } = await supabase
+    .from("album_photos")
+    .select("id, storage_path, taken_at")
+    .eq("album_id", id)
+    .order("taken_at", { ascending: true });
+
+  const paths = photos?.map((p) => p.storage_path) ?? [];
+  const { data: signed } = paths.length
+    ? await supabase.storage.from("album-photos").createSignedUrls(paths, 3600)
+    : { data: [] };
+  const urlByPath = new Map(signed?.map((s) => [s.path, s.signedUrl]));
+
+  return (
+    <>
+      <h1 className="mt-2 text-2xl font-bold">{album.title}</h1>
+
+      <div className="mt-6">
+        <Uploader albumId={album.id} ownerId={user.id} />
+      </div>
+
+      <div className="mt-6 grid grid-cols-3 gap-1 sm:grid-cols-4">
+        {photos?.map((p) => {
+          const url = urlByPath.get(p.storage_path);
+          return url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              key={p.id}
+              src={url}
+              alt=""
+              loading="lazy"
+              className="aspect-square w-full rounded-md object-cover"
+            />
+          ) : null;
+        })}
+      </div>
+      {photos?.length === 0 && (
+        <p className="mt-6 text-stone-500">ยังไม่มีรูปในอัลบั้มนี้</p>
+      )}
+    </>
+  );
+}
