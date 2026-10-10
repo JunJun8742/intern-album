@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import Uploader from "@/components/Uploader";
+import ShareControl from "@/components/ShareControl";
 
 export default function AlbumPage({ params }: PageProps<"/albums/[id]">) {
   return (
@@ -23,7 +24,7 @@ async function AlbumContent({ params }: { params: PageProps<"/albums/[id]">["par
 
   const { data: album } = await supabase
     .from("album_albums")
-    .select("id, title")
+    .select("id, title, share_token")
     .eq("id", id)
     .maybeSingle();
   if (!album) notFound();
@@ -43,6 +44,10 @@ async function AlbumContent({ params }: { params: PageProps<"/albums/[id]">["par
   return (
     <>
       <h1 className="mt-2 text-2xl font-bold">{album.title}</h1>
+
+      <div className="mt-4">
+        <ShareControl albumId={album.id} initialToken={album.share_token} />
+      </div>
 
       <div className="mt-6">
         <Uploader albumId={album.id} ownerId={user.id} />
