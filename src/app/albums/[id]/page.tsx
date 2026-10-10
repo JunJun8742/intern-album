@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import Uploader from "@/components/Uploader";
 import ShareControl from "@/components/ShareControl";
+import PhotoGrid from "@/components/PhotoGrid";
 
 export default function AlbumPage({ params }: PageProps<"/albums/[id]">) {
   return (
@@ -31,7 +32,7 @@ async function AlbumContent({ params }: { params: PageProps<"/albums/[id]">["par
 
   const { data: photos } = await supabase
     .from("album_photos")
-    .select("id, storage_path, taken_at")
+    .select("id, storage_path, taken_at, caption")
     .eq("album_id", id)
     .order("taken_at", { ascending: true });
 
@@ -53,20 +54,16 @@ async function AlbumContent({ params }: { params: PageProps<"/albums/[id]">["par
         <Uploader albumId={album.id} ownerId={user.id} />
       </div>
 
-      <div className="mt-6 grid grid-cols-3 gap-1 sm:grid-cols-4">
-        {photos?.map((p) => {
-          const url = urlByPath.get(p.storage_path);
-          return url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              key={p.id}
-              src={url}
-              alt=""
-              loading="lazy"
-              className="aspect-square w-full rounded-md object-cover"
-            />
-          ) : null;
-        })}
+      <div className="mt-6">
+        <PhotoGrid
+          editable
+          photos={(photos ?? []).flatMap((p) => {
+            const url = urlByPath.get(p.storage_path);
+            return url
+              ? [{ id: p.id, url, path: p.storage_path, caption: p.caption, takenAt: p.taken_at }]
+              : [];
+          })}
+        />
       </div>
       {photos?.length === 0 && (
         <p className="mt-6 text-stone-500">ยังไม่มีรูปในอัลบั้มนี้</p>

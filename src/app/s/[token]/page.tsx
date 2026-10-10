@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
+import PhotoGrid from "@/components/PhotoGrid";
 
 type SharedRow = {
   album_title: string;
@@ -43,20 +44,15 @@ async function SharedAlbum({ params }: { params: PageProps<"/s/[token]">["params
   return (
     <>
       <h1 className="text-2xl font-bold">{rows[0].album_title}</h1>
-      <div className="mt-6 grid grid-cols-3 gap-1 sm:grid-cols-4">
-        {rows.map((r) => {
-          const url = urlByPath.get(r.storage_path);
-          return url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              key={r.photo_id}
-              src={url}
-              alt={r.caption ?? ""}
-              loading="lazy"
-              className="aspect-square w-full rounded-md object-cover"
-            />
-          ) : null;
-        })}
+      <div className="mt-6">
+        <PhotoGrid
+          photos={rows.flatMap((r) => {
+            const url = urlByPath.get(r.storage_path);
+            return url
+              ? [{ id: r.photo_id, url, path: r.storage_path, caption: r.caption, takenAt: r.taken_at }]
+              : [];
+          })}
+        />
       </div>
     </>
   );
