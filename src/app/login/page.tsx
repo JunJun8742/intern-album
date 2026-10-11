@@ -23,6 +23,12 @@ export default function LoginPage() {
           ? await supabase.auth.signInWithPassword({ email, password })
           : await supabase.auth.signUp({ email, password });
       if (error) return setMessage(error.message);
+      // Supabase hides whether an email is registered: for an existing account it
+      // "succeeds" with no identities and sends no email.
+      if (mode === "signup" && data.user?.identities?.length === 0) {
+        setMode("signin");
+        return setMessage("อีเมลนี้มีบัญชีอยู่แล้ว ให้เข้าสู่ระบบด้วยรหัสผ่านเดิม");
+      }
       if (mode === "signup" && !data.session) {
         return setMessage("สมัครแล้ว ตรวจสอบอีเมลเพื่อยืนยัน จากนั้นเข้าสู่ระบบ");
       }
