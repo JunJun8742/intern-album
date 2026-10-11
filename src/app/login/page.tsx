@@ -16,16 +16,26 @@ export default function LoginPage() {
     e.preventDefault();
     setBusy(true);
     setMessage("");
-    const supabase = createClient();
-    const { error } =
-      mode === "signin"
-        ? await supabase.auth.signInWithPassword({ email, password })
-        : await supabase.auth.signUp({ email, password });
-    setBusy(false);
-    if (error) return setMessage(error.message);
-    if (mode === "signup") return setMessage("สมัครแล้ว ตรวจสอบอีเมลเพื่อยืนยัน จากนั้นเข้าสู่ระบบ");
-    router.replace("/");
-    router.refresh();
+    try {
+      const supabase = createClient();
+      const { data, error } =
+        mode === "signin"
+          ? await supabase.auth.signInWithPassword({ email, password })
+          : await supabase.auth.signUp({ email, password });
+      if (error) return setMessage(error.message);
+      if (mode === "signup" && !data.session) {
+        return setMessage("สมัครแล้ว ตรวจสอบอีเมลเพื่อยืนยัน จากนั้นเข้าสู่ระบบ");
+      }
+      router.replace("/");
+      router.refresh();
+    } catch (err) {
+      // e.g. missing env vars in the build, or the network dropped mid-request
+      setMessage(
+        `เชื่อมต่อไม่สำเร็จ: ${err instanceof Error ? err.message : "ไม่ทราบสาเหตุ"}`,
+      );
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
